@@ -1,0 +1,72 @@
+import MySQLdb
+ 
+ZIPCODE_INDEX = 0
+SUBURB_INDEX = 1
+MUNICIPALY_INDEX = 3
+STATE_INDEX = 4
+CITY_INDEX = 5
+ 
+db = MySQLdb.connect(
+    host = "localhost",
+    user="root",
+    passwd="root",
+    db="appraisals",
+    charset='utf8'
+    )
+cur = db.cursor()
+ 
+# Inserta los estados.
+stateName = ""
+ 
+count = 0
+with open("../CPdescarga.txt") as inFile:
+ 
+    ## Almacenara la lista de todos los estados que se van a agregar.
+    listState = {}
+    listMunicipaly = {}
+ 
+    for line in inFile:
+        #if count > 0 and count <= 10:
+        if count > 0:
+            elements = line.split("|")
+            stateName = elements[STATE_INDEX]
+            municipalyName = elements[MUNICIPALY_INDEX]
+            suburbName = elements[SUBURB_INDEX]
+            zipcode = elements[ZIPCODE_INDEX]
+ 
+            ## Valida si existe el extado, si no existe lo agrega
+            indexState = listState.get(stateName)
+ 
+            if indexState < 0:
+                cur.execute("insert into state (name) values (%s)", (stateName))
+                indexState = cur.lastrowid
+                db.commit()
+                 
+                listState[stateName] = indexState
+                print("== Estado " + stateName + " agregado con id = " + str(indexState))
+ 
+ 
+            ## Valida si existe el municipio, si no existe lo agrega
+            indexMunicipaly = listMunicipaly.get(municipalyName)
+ 
+            if indexMunicipaly < 0:
+                print("== Agregando municipio " + municipalyName + " para el id de estado " + str(indexState))
+                cur.execute("insert into municipality (name, id_state) values (%s, %s)", (municipalyName, indexState))
+                indexMunicipaly = cur.lastrowid
+                db.commit()
+ 
+                listMunicipaly[municipalyName] = indexMunicipaly
+                print("== Municipio " + municipalyName + " agregado con id = " + str(indexMunicipaly) + " para el estado = " + str(indexState))
+ 
+            print("== Agregando colonia " + suburbName + " para el id de municipio " + str(indexMunicipaly))
+            cur.execute("insert into suburb (name, id_municipality, zipcode) values (%s, %s, %s)", (suburbName, indexMunicipaly, zipcode))
+            indexSuburb = cur.lastrowid
+            db.commit()
+ 
+            print("== Colonia " + suburbName + " agregada con id = " + str(indexSuburb) + " para el municipio = " + str(indexMunicipaly))
+ 
+        count += 1
+ 
+    print(listState)
+ 
+db.close();
